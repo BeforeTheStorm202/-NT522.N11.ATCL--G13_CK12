@@ -5,6 +5,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from imblearn.pipeline import Pipeline
 
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import IsolationForest
 from sklearn.tree import ExtraTreeRegressor
 
 import numpy as np
@@ -48,17 +49,16 @@ def load_dataset():
     )
     return X_train, y_train, X_test, y_test
 
-def set_initial_params(model: IForest):
-    max_sample = 200
-    model.decision_scores_ = np.array([i for i in range(max_sample)])
-    model.labels_ = np.array([i for i in range(max_sample)])
+def set_initial_params(model: IsolationForest):
+    model.max_samples = 100
+    model.estimators_ = np.array([None])
+
 
 def set_model_params(
-    model: IForest, params
-) -> IForest:
-    model.decision_scores_ = params[0]
-    model.labels_ = params[1]
+    model: IsolationForest, params
+) -> IsolationForest:
+    model.estimators_ = params[0]
     return model
 
-def get_model_parameters(model: IForest):
-    return [model.decision_function, model.labels_]
+def get_model_parameters(model: IsolationForest):
+    return [model.estimators_]

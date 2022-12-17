@@ -4,6 +4,7 @@ import flwr as fl
 import warnings
 
 from pyod.models.iforest import IForest
+from sklearn.ensemble import IsolationForest
 
 from sklearn.metrics import log_loss
 
@@ -16,12 +17,14 @@ if __name__ == "__main__":
     X_train, y_train, X_test, y_test = utils.load_dataset()
 
     partition_id = np.random.choice(10)
-    (X_train, y_train) = utils.partition(X_train, y_train, 10)[partition_id]
+    X_train, y_train = utils.partition(X_train, y_train, 10)[partition_id]
+    #sample_X_train, sample_y_train = utils.oversample_data(X_train, y_train, outliers_fraction) 
 
-    model = IForest(
-        n_estimators=50,
+    model = IsolationForest(
+        n_estimators=100,
         contamination=outliers_fraction,
-        random_state=random_state
+        random_state=random_state, 
+        warm_start=True
     )
 
     utils.set_initial_params(model=model)
@@ -40,7 +43,7 @@ if __name__ == "__main__":
 
         def evaluate(self, parameters, config):  # type: ignore
             utils.set_model_params(model, parameters)
-            loss = log_loss(y_test, model.predict_proba(X_test))
+            loss = log_loss(y_test, model.predict(X_test))
             accuracy = model.score(X_test, y_test)
             return loss, len(X_test), {"accuracy": accuracy}
 

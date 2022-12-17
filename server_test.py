@@ -7,6 +7,7 @@ from typing import Dict
 from pyod.models.iforest import IForest
 
 from sklearn.metrics import log_loss
+from sklearn.ensemble import IsolationForest
 
 import Include.utils_test as utils
 
@@ -22,7 +23,7 @@ def get_evaluate_fn(model: IForest):
     # rename fl.common.weight to fl.common.NDArrays (https://openbase.com/python/flwr/versions)
     def evaluate(server_round, parameters: fl.common.NDArrays, config):
         utils.set_model_params(model, parameters)
-        loss = log_loss(y_test, model.predict_proba(X_test))
+        loss = log_loss(y_test, model.predict(X_test))
         accuracy = model.score(X_test, y_test)
         return loss, {"accuracy": accuracy}
 
@@ -33,10 +34,12 @@ def get_evaluate_fn(model: IForest):
 
 # Start Flower server for five rounds of federated learning
 if __name__ == "__main__":
-    model = IForest()
+    model = IsolationForest()
     utils.set_initial_params(model)
     strategy = fl.server.strategy.FedAvg(
-        min_available_clients=2,
+        min_available_clients=1,
+        min_fit_clients = 1,
+        min_evaluate_clients=1,
         evaluate_fn=get_evaluate_fn(model),
         on_fit_config_fn=fit_round,
     )

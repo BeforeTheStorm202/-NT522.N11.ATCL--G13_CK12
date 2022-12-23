@@ -27,7 +27,6 @@ def get_evaluate_fn(model: LogisticRegression):
     this function will remember all its value from its parent fucntion event after call
     '''
 
-
 # Start Flower server for five rounds of federated learning
 if __name__ == "__main__":
     model = LogisticRegression()

@@ -8,7 +8,7 @@ from sklearn.ensemble import IsolationForest
 
 from sklearn.metrics import log_loss
 
-import Include.utils_test as utils
+import Include.utils_IF as utils
 
 if __name__ == "__main__":
     random_state = 42

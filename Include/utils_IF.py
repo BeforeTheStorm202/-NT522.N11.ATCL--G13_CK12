@@ -51,7 +51,7 @@ def load_dataset():
 
 def set_initial_params(model: IsolationForest):
     model.max_samples = 100
-    model.estimators_ = np.array([None])
+    model.estimators_ = np.array([])
 
 
 def set_model_params(

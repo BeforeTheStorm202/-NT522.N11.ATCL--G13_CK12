@@ -1,12 +1,8 @@
-from pyod.models.iforest import IForest
-
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.pipeline import Pipeline
 
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import IsolationForest
-from sklearn.tree import ExtraTreeRegressor
 
 import numpy as np
 import pandas as pd
@@ -45,20 +41,6 @@ def load_dataset():
     dataset_check = pd.read_csv("data/y_1.csv")
 
     X_train, y_train, X_test, y_test = train_test_split(
-        dataset, dataset_check, test_size=0.2, random_state=10
+        dataset, dataset_check, test_size=0.2, random_state=20
     )
     return X_train, y_train, X_test, y_test
-
-def set_initial_params(model: IsolationForest):
-    model.max_samples = 100
-    model.estimators_ = np.array([])
-
-
-def set_model_params(
-    model: IsolationForest, params
-) -> IsolationForest:
-    model.estimators_ = params[0]
-    return model
-
-def get_model_parameters(model: IsolationForest):
-    return [model.estimators_]

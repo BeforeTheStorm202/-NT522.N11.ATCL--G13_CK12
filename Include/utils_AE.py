@@ -37,8 +37,8 @@ def partition(X: np.ndarray, y: np.ndarray, num_partitions: int):
     )
 
 def load_dataset():
-    dataset = pd.read_csv("data/x_1.csv")
-    dataset_check = pd.read_csv("data/y_1.csv")
+    dataset = pd.read_csv("G:/My Drive/Bitcoin/Chunk/x_chunk_1.csv")
+    dataset_check = pd.read_csv("G:/My Drive/Bitcoin/Chunk/y_chunk_1.csv")
 
     X_train, y_train, X_test, y_test = train_test_split(
         dataset, dataset_check, test_size=0.2, random_state=20

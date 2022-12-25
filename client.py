@@ -1,47 +1,85 @@
-import warnings
 import flwr as fl
 import numpy as np
+import pandas as pd
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss
+from sklearn.model_selection import train_test_split
 
-import Include.utils as utils
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
 
-if __name__ == "__main__":
+import Include.utils_AE as utils
 
-    (X_train, y_train), (X_test, y_test) = utils.load_mnist()
+epochs = 1
+random_state = 42
+batch_size = 256
+outliers_fraction = 0.057
 
-    partition_id = np.random.choice(10)
-    (X_train, y_train) = utils.partition(X_train, y_train, 10)[partition_id]
+class AnomalyDetector(tf.keras.Model):
+    def __init__(self):
+        super(AnomalyDetector, self).__init__()
+        self.encoder = tf.keras.Sequential()
+        self.encoder.add(tf.keras.Input(7))
+        self.encoder.add(tf.keras.layers.Dense(7, activation="tanh"))
+        self.encoder.add(tf.keras.layers.Dense(7, activation="tanh"))
+        self.encoder.add(tf.keras.layers.Dense(6, activation="tanh"))
+        self.encoder.add(tf.keras.layers.Dense(4, activation="tanh"))
+        self.encoder.add(tf.keras.layers.Dense(6, activation="tanh"))
+        self.encoder.add(tf.keras.layers.Dense(7, activation="sigmoid"))
 
-    model = LogisticRegression(
-        penalty="l2",
-        max_iter=5,  # local epoch
-        warm_start=True,  # prevent refreshing weights when fitting
-    )
+    def call(self, x):
+        encoded = self.encoder(x)
+        return encoded
 
-    utils.set_initial_params(model)
+autoencoder = AnomalyDetector()
 
-    class MnistClient(fl.client.NumPyClient):
-        def get_parameters(self, config):  # type: ignore
-            '''
-            Return the model weight
-            '''
-            return utils.get_model_parameters(model)
+autoencoder.compile(
+    optimizer='adam',
+    loss='mean_squared_logarithmic_error',
+    metrics=['accuracy']
+)
 
-        def fit(self, parameters, config):  # type: ignore
-            utils.set_model_params(model, parameters)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                model.fit(X_train, y_train)
-            print(f"Training finished for round {config['server_round']}")
-            return utils.get_model_parameters(model), len(X_train), {}
+x_train, x_test, y_train, y_test = utils.load_dataset()
+partition_id = np.random.choice(10)
+x_train, y_train = utils.partition(x_train, y_train, 10)[partition_id]
 
-        def evaluate(self, parameters, config):  # type: ignore
-            utils.set_model_params(model, parameters)
-            loss = log_loss(y_test, model.predict_proba(X_test))
-            accuracy = model.score(X_test, y_test)
-            return loss, len(X_test), {"accuracy": accuracy}
+x_train = tf.cast(x_train, tf.float32)
+x_test = tf.cast(x_test, tf.float32)
 
-    fl.client.start_numpy_client(
-        server_address="127.0.0.1:8080", client=MnistClient())
+y_train = y_train.astype('bool').to_numpy().ravel()
+y_test = y_test.astype('bool').to_numpy().ravel()
+
+normal_train_data = x_train[~y_train]
+normal_test_data = x_test[~y_test]
+
+anomalous_train_data = x_train[y_train]
+anomalous_test_data = x_test[y_test]
+
+x_test, y_test = utils.oversample_data(x_test, y_test, outliers_fraction)
+
+class EncoderClient(fl.client.NumPyClient):
+    def get_parameters(self, config):
+        return autoencoder.weights
+
+    def fit(self, parameters, config):
+        autoencoder.set_weights(parameters)
+        autoencoder.fit(
+            normal_train_data,
+            normal_train_data,
+            epochs=epochs,
+            batch_size=batch_size,
+            verbose=1,
+            shuffle=random_state,
+            validation_data=(x_test, x_test),
+        )
+        return autoencoder.get_weights(), len(x_train), {}
+
+    def evaluate(self, parameters, config):
+        autoencoder.set_weights(parameters)
+        loss, accuracy = autoencoder.evaluate(x_test, y_test)
+        return loss, len(x_test), {"accuracy": float(accuracy)}
+
+
+fl.client.start_numpy_client(
+    server_address="127.0.0.1:8080", client=EncoderClient()
+)

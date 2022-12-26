@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 import gc
+import random
 
 def oversample_data(X, y, oversample_fraction):
     """
@@ -37,7 +38,8 @@ def partition(X: np.ndarray, y: np.ndarray, num_partitions: int):
     )
 
 def load_dataset():
-    dataset = pd.read_csv("G:/My Drive/Bitcoin/Chunk/x_chunk_1.csv")
+    num = random.randint(1, 3)
+    dataset = pd.read_csv("G:/My Drive/Bitcoin/Chunk/x_chunk_" + str(num) + ".csv")
     dataset_check = pd.read_csv("G:/My Drive/Bitcoin/Chunk/y_chunk_1.csv")
 
     X_train, y_train, X_test, y_test = train_test_split(
